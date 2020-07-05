@@ -29,56 +29,76 @@ public class ColorFilm extends JPanel {
     {255, 0, 0}, {0, 255, 0}, {255, 255, 0}
   };
 
+  private void addOutlines() {
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        int color = image.getRGB(x, y);
+
+        if (color == 0xFFFF0000) {
+          if (image.getRGB(x, y-1) != color)
+            image.setRGB(x, y-1, 0xFF00FFFF);
+          if (image.getRGB(x, y+1) != color)
+            image.setRGB(x, y+1, 0xFF00FFFF);
+          if (image.getRGB(x-1, y) != color)
+            image.setRGB(x-1, y, 0xFF00FFFF);
+          if (image.getRGB(x+1, y) != color)
+            image.setRGB(x+1, y, 0xFF00FFFF);
+        } else if (color == 0xFF00FF00) {
+          if (image.getRGB(x, y-1) != color)
+            image.setRGB(x, y-1, 0xFFFF00FF);
+          if (image.getRGB(x, y+1) != color)
+            image.setRGB(x, y+1, 0xFFFF00FF);
+          if (image.getRGB(x-1, y) != color)
+            image.setRGB(x-1, y, 0xFFFF00FF);
+          if (image.getRGB(x+1, y) != color)
+            image.setRGB(x+1, y, 0xFFFF00FF);
+        } else if (color == 0xFF0000FF) {
+          if (image.getRGB(x, y-1) != color)
+            image.setRGB(x, y-1, 0xFFFFFF00);
+          if (image.getRGB(x, y+1) != color)
+            image.setRGB(x, y+1, 0xFFFFFF00);
+          if (image.getRGB(x-1, y) != color)
+            image.setRGB(x-1, y, 0xFFFFFF00);
+          if (image.getRGB(x+1, y) != color)
+            image.setRGB(x+1, y, 0xFFFFFF00);
+        }
+      }
+    }
+  }
+
   private void generate() {
-    System.out.println("painted");
     for (int i = 0; i < width * height * 3; i+=3) {
 
-      int[] options = {0, 1, 2};
+      int[][] cset = null;
 
-      if (pixels[i + 0] == 0) { // No blue
-        options[0] = 1;
-      }
-      if (pixels[i + 1] == 0) { // No green
-        if (options[0] == 0) {
-          options[1] = 0;
-        } else {
-          options[0] = 2;
-          options[1] = 2;
-        }
-      }
-      if (pixels[i + 2] == 0) { // No red
-        if (options[0] == 0) {
-          options[2] = 0;
-        } else { // options[0] = 1 or 2
-          if (options[1] == 1) {
-            options[2] = 1;
-          } else { // 
-            options[2] = 2;
-          }
-        }
-      }
-
-      int chosen = options[(int)(Math.random() * 3)];
-      int[][] b = null;
-
-      int ci = (int)(Math.random() * 3);
-      switch(chosen) {
-        case 0:
-          pixels[i + 2] = (byte)bb[ci][2];
-          pixels[i + 1] = (byte)bb[ci][1];
-          pixels[i + 0] = (byte)bb[ci][0];
+      int color = image.getRGB((i / 3) % width, (i / 3) / height);
+      
+      switch(color) {
+        case 0xFFFF0000:
+          cset = br;
           break;
-        case 1:
-          pixels[i + 2] = (byte)bg[ci][2];
-          pixels[i + 1] = (byte)bg[ci][1];
-          pixels[i + 0] = (byte)bg[ci][0];
+        case 0xFF00FFFF:
+          cset = dr;
+          break;
+        case 0xFF00FF00:
+          cset = bg;
+          break;
+        case 0xFFFF00FF:
+          cset = dg;
+          break;
+        case 0xFF0000FF:
+          cset = bb;
           break;
         default:
-          pixels[i + 2] = (byte)br[ci][2];
-          pixels[i + 1] = (byte)br[ci][1];
-          pixels[i + 0] = (byte)br[ci][0];
+          int c = (int)(Math.random() * 6);
+          int[][][] csets = {bb, bg, br, db, dg, dr};
+          cset = csets[c];
           break;
       }
+      int ci = (int)(Math.random() * 3);
+      pixels[i + 2] = (byte)cset[ci][2];
+      pixels[i + 1] = (byte)cset[ci][1];
+      pixels[i + 0] = (byte)cset[ci][0];
     }
   }
 
@@ -96,6 +116,7 @@ public class ColorFilm extends JPanel {
     
     pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
 
+    addOutlines();
     generate();
 
     setMinimumSize(new Dimension(width*4, height*4));
