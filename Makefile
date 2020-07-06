@@ -1,4 +1,4 @@
-ColorFilm.class:
+all:
 	@javac ColorFilm.java
 
 clean:

@@ -29,76 +29,101 @@ public class ColorFilm extends JPanel {
     {255, 0, 0}, {0, 255, 0}, {255, 255, 0}
   };
 
+  public BufferedImage getImage() {
+    return image;
+  }
+
   private void addOutlines() {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         int color = image.getRGB(x, y);
 
-        if (color == 0xFFFF0000) {
-          if (image.getRGB(x, y-1) != color)
-            image.setRGB(x, y-1, 0xFF00FFFF);
-          if (image.getRGB(x, y+1) != color)
-            image.setRGB(x, y+1, 0xFF00FFFF);
-          if (image.getRGB(x-1, y) != color)
-            image.setRGB(x-1, y, 0xFF00FFFF);
-          if (image.getRGB(x+1, y) != color)
-            image.setRGB(x+1, y, 0xFF00FFFF);
-        } else if (color == 0xFF00FF00) {
-          if (image.getRGB(x, y-1) != color)
-            image.setRGB(x, y-1, 0xFFFF00FF);
-          if (image.getRGB(x, y+1) != color)
-            image.setRGB(x, y+1, 0xFFFF00FF);
-          if (image.getRGB(x-1, y) != color)
-            image.setRGB(x-1, y, 0xFFFF00FF);
-          if (image.getRGB(x+1, y) != color)
-            image.setRGB(x+1, y, 0xFFFF00FF);
-        } else if (color == 0xFF0000FF) {
-          if (image.getRGB(x, y-1) != color)
-            image.setRGB(x, y-1, 0xFFFFFF00);
-          if (image.getRGB(x, y+1) != color)
-            image.setRGB(x, y+1, 0xFFFFFF00);
-          if (image.getRGB(x-1, y) != color)
-            image.setRGB(x-1, y, 0xFFFFFF00);
-          if (image.getRGB(x+1, y) != color)
-            image.setRGB(x+1, y, 0xFFFFFF00);
+        if (color != 0xFFFFFFFF) {
+          int red = (color >> 16) & 0xff;
+          int green = (color >> 8) & 0xff;
+          int blue = color & 0xff;
+          int newColor = (0xff << 24) + ((255 - red) << 16) + ((255 - green) << 8) + (255 - blue);
+          if (y > 0 && image.getRGB(x, y-1) != color)
+            image.setRGB(x, y-1, newColor);
+          if (x > 0 && image.getRGB(x-1, y) != color)
+            image.setRGB(x-1, y, newColor);
+        }
+      }
+    }
+    for (int y = height - 1; y > 0; y--) {
+      for (int x = width - 1; x > 0; x--) {
+        int color = image.getRGB(x, y);
+
+        if (color != 0xFFFFFFFF) {
+          int red = (color >> 16) & 0xff;
+          int green = (color >> 8) & 0xff;
+          int blue = color & 0xff;
+          int newColor = (0xff << 24) + ((255 - red) << 16) + ((255 - green) << 8) + (255 - blue);
+          if (y < height - 1 && image.getRGB(x, y+1) != color)
+            image.setRGB(x, y+1, newColor);
+          if (x < width - 1 && image.getRGB(x+1, y) != color)
+            image.setRGB(x+1, y, newColor);
         }
       }
     }
   }
 
   private void generate() {
-    for (int i = 0; i < width * height * 3; i+=3) {
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        int[][] cset = null;
 
-      int[][] cset = null;
+        int color = image.getRGB(x, y);
 
-      int color = image.getRGB((i / 3) % width, (i / 3) / height);
-      
-      switch(color) {
-        case 0xFFFF0000:
-          cset = br;
-          break;
-        case 0xFF00FFFF:
-          cset = dr;
-          break;
-        case 0xFF00FF00:
-          cset = bg;
-          break;
-        case 0xFFFF00FF:
-          cset = dg;
-          break;
-        case 0xFF0000FF:
-          cset = bb;
-          break;
-        default:
-          int c = (int)(Math.random() * 6);
-          int[][][] csets = {bb, bg, br, db, dg, dr};
-          cset = csets[c];
-          break;
+        int red = (color >> 16) & 0xff;
+        int green = (color >> 8) & 0xff;
+        int blue = color & 0xff;
+
+        double total = red + green + blue;
+
+        double cr = (double)red / total;
+        double cg = cr + (double)green / total;
+        double cb = cg + (double)blue / total;
+
+        double choice = Math.random();
+        float hue;
+        if (choice < cr)
+          hue = (float)(Math.random() * 100 - 60);
+        else if (choice < cg)
+          hue = (float)(Math.random() * 100 + 80);
+        else
+          hue = (float)(Math.random() * 100 + 200);
+
+        hue /= 360.0f;
+
+        color = Color.HSBtoRGB(hue, 1.0f, 1.0f);
+        //switch(color) {
+        //  case 0xFFFF0000:
+        //    cset = br;
+        //    break;
+        //  case 0xFF00FFFF:
+        //    cset = dr;
+        //    break;
+        //  case 0xFF00FF00:
+        //    cset = bg;
+        //    break;
+        //  case 0xFFFF00FF:
+        //    cset = dg;
+        //    break;
+        //  case 0xFF0000FF:
+        //    cset = bb;
+        //    break;
+        //  default:
+        //    int c = (int)(Math.random() * 6);
+        //    int[][][] csets = {bb, bg, br, db, dg, dr};
+        //    cset = csets[c];
+        //    break;
+        //}
+        int i = (y * width + x) * 3;
+        pixels[i + 2] = (byte)((color >> 16) & 0xff);
+        pixels[i + 1] = (byte)((color >> 8) & 0xff);
+        pixels[i + 0] = (byte)(color & 0xff);
       }
-      int ci = (int)(Math.random() * 3);
-      pixels[i + 2] = (byte)cset[ci][2];
-      pixels[i + 1] = (byte)cset[ci][1];
-      pixels[i + 0] = (byte)cset[ci][0];
     }
   }
 
@@ -133,8 +158,6 @@ public class ColorFilm extends JPanel {
   }
 
   public void paintComponent(Graphics g) {
-
-
     g.drawImage(image, 0, 0, width*4, height*4, null);
   }
 
@@ -142,9 +165,20 @@ public class ColorFilm extends JPanel {
     File file = null;
     try {
       file = new File(args[0]);
+
     } catch (Exception e) {
       System.err.println("Couldn't open " + args[0]);
     }
-    new ColorFilm(file);
+    ColorFilm cf = new ColorFilm(file);
+
+    try {
+      if (args.length == 2) {
+        File outputFile = new File(args[1]);
+        ImageIO.write(cf.getImage(), "png", outputFile);
+        System.out.println("Output saved in '" + args[1] + "'");
+      }
+    } catch (Exception e) {
+      System.err.println("Couldn't write output to '" + args[1] + "'");
+    }
   }
 }
