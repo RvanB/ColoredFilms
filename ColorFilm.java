@@ -6,28 +6,18 @@ import java.awt.image.*;
 import java.util.Random;
 
 public class ColorFilm extends JPanel {
-
   private int width, height;
   private BufferedImage image = null;
   private byte[] pixels;
-  private int[][] bb = {
-    {255, 0, 0}, {255, 255, 0}, {255, 0, 255}
+  private int[] palette = {
+    0x6dcce1, 0x7695cc, 0xc794c2, 0xcd7a40, 0xd5d940, 0x8dc750, 0x8f807c, 0xcbc2bf
   };
-  private int[][] bg = {
-    {0, 255, 0}, {255, 255, 0}, {0, 255, 255}
-  };
-  private int[][] br = {
-    {0, 0, 255}, {255, 0, 255}, {0, 255, 255}
-  };
-  private int[][] db = {
-    {0, 255, 0}, {0, 0, 255}, {0, 255, 255}
-  };
-  private int[][] dg = {
-    {255, 0, 0}, {0, 0, 255}, {255, 0, 255}
-  };
-  private int[][] dr = {
-    {255, 0, 0}, {0, 255, 0}, {255, 255, 0}
-  };
+  private int[] bb = { 0, 1, 2, 7 };
+  private int[] bg = { 0, 4, 5, 7 };
+  private int[] br = { 2, 3, 4, 7 };
+  private int[] db = { 3, 4, 5, 6 };
+  private int[] dg = { 1, 2, 3, 6 };
+  private int[] dr = { 0, 1, 5, 6 };
 
   public BufferedImage getImage() {
     return image;
@@ -68,63 +58,97 @@ public class ColorFilm extends JPanel {
     }
   }
 
+  private double luminance(float hue) {
+    int color = Color.HSBtoRGB(hue, 1.0f, 1.0f);
+    int red = (color >> 16) & 0xff;
+    int green = (color >> 8) & 0xff;
+    int blue = color & 0xff;
+
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  }
+
   private void generate() {
+    float minLum = 0;
+    float maxLum = 0;
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        int[][] cset = null;
+        int[] cset = null;
 
         int color = image.getRGB(x, y);
+        boolean hueVersion = false;
 
-        int red = (color >> 16) & 0xff;
-        int green = (color >> 8) & 0xff;
-        int blue = color & 0xff;
+        if (hueVersion) {
+          int red = (color >> 16) & 0xff;
+          int green = (color >> 8) & 0xff;
+          int blue = color & 0xff;
 
-        double total = red + green + blue;
+          double total = red + green + blue;
 
-        double cr = (double)red / total;
-        double cg = cr + (double)green / total;
-        double cb = cg + (double)blue / total;
+          double cr = (double)red / total;
+          double cg = cr + (double)green / total;
+          double cb = cg + (double)blue / total;
 
-        double choice = Math.random();
-        float hue;
-        if (choice < cr)
-          hue = (float)(Math.random() * 100 - 60);
-        else if (choice < cg)
-          hue = (float)(Math.random() * 100 + 80);
-        else
-          hue = (float)(Math.random() * 100 + 200);
+          double choice = Math.random();
+          float hue;
 
-        hue /= 360.0f;
+          if (choice < cr) {
+            hue = (float)(Math.random() * 100 - 60);
+          } else if (choice < cg) {
+            hue = (float)(Math.random() * 100 + 80);
+          } else {
+            hue = (float)(Math.random() * 100 + 200);
+          }
 
-        color = Color.HSBtoRGB(hue, 1.0f, 1.0f);
-        //switch(color) {
-        //  case 0xFFFF0000:
-        //    cset = br;
-        //    break;
-        //  case 0xFF00FFFF:
-        //    cset = dr;
-        //    break;
-        //  case 0xFF00FF00:
-        //    cset = bg;
-        //    break;
-        //  case 0xFFFF00FF:
-        //    cset = dg;
-        //    break;
-        //  case 0xFF0000FF:
-        //    cset = bb;
-        //    break;
-        //  default:
-        //    int c = (int)(Math.random() * 6);
-        //    int[][][] csets = {bb, bg, br, db, dg, dr};
-        //    cset = csets[c];
-        //    break;
-        //}
-        int i = (y * width + x) * 3;
-        pixels[i + 2] = (byte)((color >> 16) & 0xff);
-        pixels[i + 1] = (byte)((color >> 8) & 0xff);
-        pixels[i + 0] = (byte)(color & 0xff);
+          hue /= 360.0f;
+
+          float perceived = (float)(luminance(hue));
+
+          if (perceived > maxLum)
+            maxLum = perceived;
+          else if (perceived < minLum)
+            minLum = perceived;
+
+          float brightness = (float)(94.0 / perceived);
+
+          color = Color.HSBtoRGB(hue, 1.0f, 1.0f);
+          int i = (y * width + x) * 3;
+          pixels[i + 2] = (byte)((color >> 16) & 0xff);
+          pixels[i + 1] = (byte)((color >> 8) & 0xff);
+          pixels[i + 0] = (byte)(color & 0xff);
+        } else {
+          switch(color) {
+            case 0xFFFF0000:
+              cset = br;
+              break;
+            case 0xFF00FFFF:
+              cset = dr;
+              break;
+            case 0xFF00FF00:
+              cset = bg;
+              break;
+            case 0xFFFF00FF:
+              cset = dg;
+              break;
+            case 0xFF0000FF:
+              cset = bb;
+              break;
+            default:
+              int c = (int)(Math.random() * 6);
+              int[][] csets = {bb, bg, br, db, dg, dr};
+              cset = csets[c];
+              break;
+          }
+          int ci = (int)(Math.random() * cset.length);
+          int i = (y * width + x) * 3;
+          color = palette[cset[ci]];
+          pixels[i + 2] = (byte)((color >> 16) & 0xff);
+          pixels[i + 1] = (byte)((color >> 8) & 0xff);
+          pixels[i + 0] = (byte)(color & 0xff);
+        }
+
       }
     }
+    
   }
 
   private ColorFilm(File file) {
@@ -141,7 +165,7 @@ public class ColorFilm extends JPanel {
     
     pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
 
-    addOutlines();
+    //addOutlines();
     generate();
 
     setMinimumSize(new Dimension(width*4, height*4));
